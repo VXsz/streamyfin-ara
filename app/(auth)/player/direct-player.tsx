@@ -12,10 +12,11 @@ import {
 } from "@jellyfin/sdk/lib/utils/api";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { router, useGlobalSearchParams, useNavigation } from "expo-router";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Platform, View } from "react-native";
+import { Alert, BackHandler, Dimensions, Platform, View } from "react-native";
 import { useAnimatedReaction, useSharedValue } from "react-native-reanimated";
 
 import { BITRATES } from "@/components/BitrateSelector";
@@ -69,6 +70,7 @@ export default function page() {
   const [isMuted, setIsMuted] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   const progress = useSharedValue(0);
   const isSeeking = useSharedValue(false);
@@ -318,23 +320,67 @@ export default function page() {
     revalidateProgressCache,
   ]);
 
-  const stop = useCallback(() => {
-    // Update URL with final playback position before stopping
-    router.setParams({
-      playbackPosition: msToTicks(progress.get()).toString(),
-    });
-    reportPlaybackStopped();
-    setIsPlaybackStopped(true);
-    videoRef.current?.stop();
-    revalidateProgressCache();
-  }, [videoRef, reportPlaybackStopped, progress]);
+  const handleExit = useCallback(async () => {
+    if (isExiting) return;
+    setIsExiting(true);
+
+    try {
+      setIsPlaybackStopped(true);
+      videoRef.current?.stop();
+
+      reportPlaybackStopped();
+      revalidateProgressCache();
+
+      const currentOrientation = await ScreenOrientation.getOrientationAsync();
+      if (currentOrientation === ScreenOrientation.Orientation.PORTRAIT_UP) {
+        router.back();
+        return;
+      }
+
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
+      );
+
+      const checkOrientation = setInterval(() => {
+        const { width, height } = Dimensions.get("window");
+        if (height > width) {
+          clearInterval(checkOrientation);
+          router.back();
+        }
+      }, 50);
+
+      setTimeout(() => {
+        clearInterval(checkOrientation);
+        router.back();
+      }, 600);
+    } catch (_e) {
+      router.back();
+    }
+  }, [isExiting, videoRef, router, reportPlaybackStopped]);
 
   useEffect(() => {
-    const beforeRemoveListener = navigation.addListener("beforeRemove", stop);
-    return () => {
-      beforeRemoveListener();
+    const onBackPress = () => {
+      handleExit();
+      return true;
     };
-  }, [navigation, stop]);
+
+    BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+    };
+  }, [handleExit]);
+
+  useEffect(() => {
+    const beforeRemoveListener = navigation.addListener("beforeRemove", (e) => {
+      if (isExiting) return;
+      e.preventDefault();
+      handleExit();
+    });
+    return () => {
+      navigation.removeListener("beforeRemove", beforeRemoveListener);
+    };
+  }, [navigation, handleExit, isExiting]);
 
   const currentPlayStateInfo = useCallback(() => {
     if (!stream || !item?.Id) return;
@@ -500,7 +546,7 @@ export default function page() {
   useWebSocket({
     isPlaying: isPlaying,
     togglePlay: togglePlay,
-    stopPlayback: stop,
+    stopPlayback: handleExit,
     offline,
     toggleMute: toggleMuteCb,
     volumeUp: volumeUpCb,
@@ -734,48 +780,51 @@ export default function page() {
         width: "100%",
       }}
     >
-      <View
-        style={{
-          display: "flex",
-          width: "100%",
-          height: "100%",
-          position: "relative",
-          flexDirection: "column",
-          justifyContent: "center",
-        }}
-      >
-        <VlcPlayerView
-          ref={videoRef}
-          source={{
-            uri: stream?.url || "",
-            autoplay: true,
-            isNetwork: !offline,
-            startPosition,
-            externalSubtitles,
-            initOptions,
-          }}
-          style={{ width: "100%", height: "100%" }}
-          nowPlayingMetadata={nowPlayingMetadata}
-          onVideoProgress={onProgress}
-          progressUpdateInterval={1000}
-          onVideoStateChange={onPlaybackStateChanged}
-          onVideoLoadEnd={() => {
-            setIsVideoLoaded(true);
-          }}
-          onVideoError={(e) => {
-            console.error("Video Error:", e.nativeEvent);
-            Alert.alert(
-              t("player.error"),
-              t("player.an_error_occured_while_playing_the_video"),
-            );
-            writeToLog("ERROR", "Video Error", e.nativeEvent);
-          }}
-          onPipStarted={(e) => {
-            setIsPipMode(e.nativeEvent.pipStarted);
-          }}
-        />
-      </View>
-      {isMounted === true && item && !isPipMode && (
+      {/*
+                PERFORMANCE OPTIMIZATION:
+                When isExiting is true, we unmount the heavy VlcPlayerView immediately.
+                We replace it with a black view or a static placeholder.
+                This releases the OpenGL surface thread/decoder ensuring the
+                OS rotation animation is buttery smooth.
+                */}
+      {!isExiting ? (
+        <View style={{ display: "flex", width: "100%", height: "100%" }}>
+          <VlcPlayerView
+            ref={videoRef}
+            source={{
+              uri: stream?.url || "",
+              autoplay: true,
+              isNetwork: !offline,
+              startPosition,
+              externalSubtitles,
+              initOptions,
+            }}
+            style={{ width: "100%", height: "100%" }}
+            nowPlayingMetadata={nowPlayingMetadata}
+            onVideoProgress={onProgress}
+            progressUpdateInterval={1000}
+            onVideoStateChange={onPlaybackStateChanged}
+            onVideoLoadEnd={() => {
+              setIsVideoLoaded(true);
+            }}
+            onVideoError={(e) => {
+              console.error("Video Error:", e.nativeEvent);
+              Alert.alert(
+                t("player.error"),
+                t("player.an_error_occured_while_playing_the_video"),
+              );
+              writeToLog("ERROR", "Video Error", e.nativeEvent);
+            }}
+            onPipStarted={(e) => {
+              setIsPipMode(e.nativeEvent.pipStarted);
+            }}
+          />
+        </View>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: "black" }} />
+      )}
+      {/* Pass the handleExit to your controls so the UI close button uses it */}
+      {!isExiting && isMounted === true && item && !isPipMode && (
         <Controls
           mediaSource={stream?.mediaSource}
           item={item}
@@ -809,6 +858,7 @@ export default function page() {
           isVlc
           api={api}
           downloadedFiles={downloadedFiles}
+          onClose={handleExit}
         />
       )}
     </View>

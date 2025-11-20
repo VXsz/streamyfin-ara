@@ -45,6 +45,7 @@ interface HeaderControlsProps {
   setScaleFactor?: Dispatch<SetStateAction<ScaleFactor>>;
   setVideoAspectRatio?: (aspectRatio: string | null) => Promise<void>;
   setVideoScaleFactor?: (scaleFactor: number) => Promise<void>;
+  onClose?: () => void;
 }
 
 export const HeaderControls: FC<HeaderControlsProps> = ({
@@ -69,6 +70,7 @@ export const HeaderControls: FC<HeaderControlsProps> = ({
   setScaleFactor,
   setVideoAspectRatio,
   setVideoScaleFactor,
+  onClose,
 }) => {
   const { settings } = useSettings();
   const router = useRouter();
@@ -91,9 +93,13 @@ export const HeaderControls: FC<HeaderControlsProps> = ({
     await setVideoScaleFactor(newScale);
   };
 
-  const onClose = async () => {
+  const onCloseHandler = async () => {
     lightHapticFeedback();
-    router.back();
+    if (onClose) {
+      onClose();
+    } else {
+      router.back();
+    }
   };
 
   return (
@@ -185,7 +191,7 @@ export const HeaderControls: FC<HeaderControlsProps> = ({
           disabled={!setVideoScaleFactor}
         />
         <TouchableOpacity
-          onPress={onClose}
+          onPress={onCloseHandler}
           className='aspect-square flex flex-col rounded-xl items-center justify-center p-2'
         >
           <Ionicons name='close' size={ICON_SIZES.HEADER} color='white' />

@@ -82,6 +82,7 @@ interface Props {
   isVlc?: boolean;
   api?: Api | null;
   downloadedFiles?: DownloadedItem[];
+  onClose?: () => void;
 }
 
 export const Controls: FC<Props> = ({
@@ -115,6 +116,7 @@ export const Controls: FC<Props> = ({
   isVlc = false,
   api = null,
   downloadedFiles = undefined,
+  onClose,
 }) => {
   const { settings, updateSettings } = useSettings();
   const router = useRouter();
@@ -526,6 +528,7 @@ export const Controls: FC<Props> = ({
               setScaleFactor={setScaleFactor}
               setVideoAspectRatio={setVideoAspectRatio}
               setVideoScaleFactor={setVideoScaleFactor}
+              onClose={onClose}
             />
           </Animated.View>
           <Animated.View

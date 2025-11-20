@@ -13,6 +13,7 @@ export default function Layout() {
             autoHideHomeIndicator: true,
             title: "",
             animation: "fade",
+            gestureEnabled: false,
           }}
         />
       </Stack>
