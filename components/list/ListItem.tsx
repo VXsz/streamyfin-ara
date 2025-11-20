@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { I18nManager } from "react-native";
 import type { PropsWithChildren, ReactNode } from "react";
 import { TouchableOpacity, View, type ViewProps } from "react-native";
 import { Text } from "../common/Text";
@@ -75,6 +76,8 @@ export const ListItem: React.FC<PropsWithChildren<Props>> = ({
 };
 
 const ListItemContent = ({
+  // @ts-ignore
+  _rtl_hack = null,
   title,
   subtitle,
   textColor,
@@ -86,6 +89,7 @@ const ListItemContent = ({
 }: Props) => {
   return (
     <>
+      {/* RTL: Flip chevron if needed */}
       <View className='flex flex-row items-center w-full'>
         {icon && (
           <View className='border border-neutral-800 rounded-md h-8 w-8 flex items-center justify-center mr-2'>
@@ -124,7 +128,7 @@ const ListItemContent = ({
         {children && <View className='ml-auto'>{children}</View>}
         {showArrow && (
           <View className={children ? "ml-1" : "ml-auto"}>
-            <Ionicons name='chevron-forward' size={18} color='#5A5960' />
+            <Ionicons style={{ transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }] }} name='chevron-forward' size={18} color='#5A5960' />
           </View>
         )}
       </View>

@@ -1,6 +1,8 @@
 import { getLocales } from "expo-localization";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { I18nManager } from "react-native";
+import * as Updates from "expo-updates";
 import ar from "./translations/ar.json";
 import ca from "./translations/ca.json";
 import da from "./translations/da.json";
@@ -98,4 +100,19 @@ i18n.use(initReactI18next).init({
   },
 });
 
-export default i18n;
+i18n.on("languageChanged", async (lng) => {
+                const isRTL = i18n.dir(lng) === "rtl";
+                if (isRTL !== I18nManager.isRTL) {
+                    I18nManager.allowRTL(isRTL);
+                    I18nManager.forceRTL(isRTL);
+                    if (!__DEV__) {
+                        try {
+                            await Updates.reloadAsync();
+                        } catch (e) {
+                            console.error("Failed to reload for RTL change", e);
+                        }
+                    }
+                }
+            });
+
+            export default i18n;

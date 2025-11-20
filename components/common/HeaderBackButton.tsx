@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView, type BlurViewProps } from "expo-blur";
 import { useRouter } from "expo-router";
+import { I18nManager } from "react-native";
 import {
   Platform,
   TouchableOpacity,
@@ -18,6 +19,7 @@ export const HeaderBackButton: React.FC<Props> = ({
   ...props
 }) => {
   const router = useRouter();
+  const iconStyle = { transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }] };
 
   if (Platform.OS === "ios") {
     return (
@@ -26,7 +28,7 @@ export const HeaderBackButton: React.FC<Props> = ({
         className='flex items-center justify-center w-9 h-9'
         {...touchableOpacityProps}
       >
-        <Ionicons name='arrow-back' size={24} color='white' />
+        <Ionicons style={iconStyle} name='arrow-back' size={24} color='white' />
       </TouchableOpacity>
     );
   }
@@ -42,9 +44,7 @@ export const HeaderBackButton: React.FC<Props> = ({
           intensity={100}
           className='overflow-hidden rounded-full p-2'
         >
-          <Ionicons
-            className='drop-shadow-2xl'
-            name='arrow-back'
+          <Ionicons className='drop-shadow-2xl' style={iconStyle} name='arrow-back'
             size={24}
             color='white'
           />
@@ -58,9 +58,7 @@ export const HeaderBackButton: React.FC<Props> = ({
       className=' rounded-full p-2'
       {...touchableOpacityProps}
     >
-      <Ionicons
-        className='drop-shadow-2xl'
-        name='arrow-back'
+      <Ionicons className='drop-shadow-2xl' style={iconStyle} name='arrow-back'
         size={24}
         color='white'
       />

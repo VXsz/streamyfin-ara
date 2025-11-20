@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  I18nManager,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -167,13 +168,15 @@ export const AppleTVCarousel: React.FC<AppleTVCarouselProps> = ({
   const { isConnected, serverConnected } = useNetworkStatus();
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isRTL = I18nManager.isRTL;
+  const dir = isRTL ? -1 : 1;
   const isLandscape = screenWidth >= screenHeight;
   const carouselHeight = useMemo(
     () => (isLandscape ? screenHeight * 0.9 : screenHeight / 1.45),
     [isLandscape, screenHeight],
   );
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const translateX = useSharedValue(-initialIndex * screenWidth);
+  const translateX = useSharedValue(-initialIndex * screenWidth * dir);
 
   const isQueryEnabled =
     !!api && !!user?.Id && isConnected && serverConnected === true;
@@ -301,19 +304,19 @@ export const AppleTVCarousel: React.FC<AppleTVCarouselProps> = ({
   useEffect(() => {
     if (!hasItems) {
       setCurrentIndex(initialIndex);
-      translateX.value = -initialIndex * screenWidth;
+      translateX.value = -initialIndex * screenWidth * dir;
       return;
     }
 
     setCurrentIndex((prev) => {
       const newIndex = Math.min(prev, items.length - 1);
-      translateX.value = -newIndex * screenWidth;
+      translateX.value = -newIndex * screenWidth * dir;
       return newIndex;
     });
   }, [hasItems, items, initialIndex, screenWidth, translateX]);
 
   useEffect(() => {
-    translateX.value = -currentIndex * screenWidth;
+    translateX.value = -currentIndex * screenWidth * dir;
   }, [currentIndex, screenWidth, translateX]);
 
   useEffect(() => {
@@ -326,7 +329,7 @@ export const AppleTVCarousel: React.FC<AppleTVCarouselProps> = ({
     (index: number) => {
       if (!hasItems || index < 0 || index >= items.length) return;
 
-      translateX.value = withTiming(-index * screenWidth, {
+      translateX.value = withTiming(-index * screenWidth * dir, {
         duration: CAROUSEL_TRANSITION_DURATION, // Slightly longer for smoother feel
         easing: Easing.bezier(0.25, 0.46, 0.45, 0.94), // iOS-like smooth deceleration curve
       });
@@ -348,7 +351,7 @@ export const AppleTVCarousel: React.FC<AppleTVCarouselProps> = ({
   const panGesture = Gesture.Pan()
     .activeOffsetX([-PAN_ACTIVE_OFFSET, PAN_ACTIVE_OFFSET])
     .onUpdate((event) => {
-      translateX.value = -currentIndex * screenWidth + event.translationX;
+      translateX.value = (-currentIndex * screenWidth * dir) + event.translationX;
     })
     .onEnd((event) => {
       const velocity = event.velocityX;
@@ -358,21 +361,18 @@ export const AppleTVCarousel: React.FC<AppleTVCarouselProps> = ({
 
       // Improved thresholds for more responsive navigation
       if (
-        Math.abs(translation) > screenWidth * TRANSLATION_THRESHOLD ||
-        Math.abs(velocity) > VELOCITY_THRESHOLD
-      ) {
-        if (translation > 0 && currentIndex > 0) {
-          newIndex = currentIndex - 1;
-        } else if (
-          translation < 0 &&
-          items &&
-          currentIndex < items.length - 1
-        ) {
-          newIndex = currentIndex + 1;
-        }
-      }
+                    Math.abs(translation) > screenWidth * TRANSLATION_THRESHOLD ||
+                    Math.abs(velocity) > VELOCITY_THRESHOLD
+                ) {
+                    const wantsNext = isRTL ? (translation > 0) : (translation < 0);
+                    if (wantsNext && items && currentIndex < items.length - 1) {
+                        newIndex = currentIndex + 1;
+                    } else if (!wantsNext && currentIndex > 0) {
+                        newIndex = currentIndex - 1;
+                    }
+                }
 
-      runOnJS(goToIndex)(newIndex);
+                runOnJS(goToIndex)(newIndex);
     });
 
   const containerAnimatedStyle = useAnimatedStyle(() => {

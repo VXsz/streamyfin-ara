@@ -11,6 +11,7 @@
     "newArchEnabled": true,
     "assetBundlePatterns": ["**/*"],
     "ios": {
+      "supportsRTL": true,
       "requireFullScreen": true,
       "infoPlist": {
         "NSCameraUsageDescription": "The app needs access to your camera to scan barcodes.",
@@ -33,6 +34,7 @@
       "appleTeamId": "MWD5K362T8"
     },
     "android": {
+      "supportsRTL": true,
       "jsEngine": "hermes",
       "versionCode": 85,
       "adaptiveIcon": {
@@ -139,6 +141,7 @@
       "typedRoutes": true
     },
     "extra": {
+      "supportsRTL": true,
       "router": {
         "origin": false
       },
