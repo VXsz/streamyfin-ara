@@ -337,7 +337,7 @@ export const AppleTVCarousel: React.FC<AppleTVCarouselProps> = ({
       setCurrentIndex(index);
       onItemChange?.(index);
     },
-    [hasItems, items, onItemChange, screenWidth, translateX],
+    [hasItems, items, onItemChange, screenWidth, translateX, dir],
   );
 
   const navigateToItem = useCallback(
