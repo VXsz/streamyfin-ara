@@ -313,11 +313,11 @@ export const AppleTVCarousel: React.FC<AppleTVCarouselProps> = ({
       translateX.value = -newIndex * screenWidth * dir;
       return newIndex;
     });
-  }, [hasItems, items, initialIndex, screenWidth, translateX]);
+  }, [hasItems, items, initialIndex, screenWidth, translateX, dir]);
 
   useEffect(() => {
     translateX.value = -currentIndex * screenWidth * dir;
-  }, [currentIndex, screenWidth, translateX]);
+  }, [currentIndex, screenWidth, translateX, dir]);
 
   useEffect(() => {
     if (hasItems) {

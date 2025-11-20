@@ -87,6 +87,7 @@ const ListItemContent = ({
   iconAfter,
   children,
 }: Props) => {
+  const arrowStyle = { transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }] };
   return (
     <>
       {/* RTL: Flip chevron if needed */}
@@ -128,7 +129,7 @@ const ListItemContent = ({
         {children && <View className='ml-auto'>{children}</View>}
         {showArrow && (
           <View className={children ? "ml-1" : "ml-auto"}>
-            <Ionicons style={{ transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }] }} name='chevron-forward' size={18} color='#5A5960' />
+            <Ionicons style={arrowStyle} name='chevron-forward' size={18} color='#5A5960' />
           </View>
         )}
       </View>
